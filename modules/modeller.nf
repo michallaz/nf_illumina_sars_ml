@@ -1,5 +1,5 @@
 process modeller {
-    tag "Running modeller for sample:\t$sampleId"
+    tag "modeller:${sampleId}"
     publishDir "${params.results_dir}/${sampleId}", mode: 'copy', pattern: "${sampleId}_spike.pdb"
 
     input:
@@ -11,7 +11,7 @@ process modeller {
     script:
     """
     if [ -s ${target_fasta} ] ; then
-        cp /home/SARS-CoV2/modeller/7dwz.pdb .
+        cp /home/data/modeller/7dwz.pdb .
         modpy.sh modeller_create_alignment.py ${target_fasta}
         modpy.sh modeller_build_model.py alignment.pir
         cp target.B99990001.pdb ${sampleId}_spike.pdb 
