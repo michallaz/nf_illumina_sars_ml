@@ -87,7 +87,8 @@ workflow{
     wgsMetrics(indelQual.out, ref_genome)
     c2 = lowCov.out[1].join(varScan.out).join(freeBayes.out).join(lofreq.out)
     consensus(c2)
-    nextclade(detect_subtype.out[1], consensus.out[1])
-    nextalign(detect_subtype.out[1], consensus.out[1], nextalign_db)
+    manta(picard.out.join(consensus.out[1]), ref_genome)
+    nextclade(detect_subtype.out[1], manta.out)
+    nextalign(detect_subtype.out[1], manta.out, nextalign_db)
     resistance(detect_subtype.out[1], nextalign.out)
 }

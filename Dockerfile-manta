@@ -1,4 +1,4 @@
-FROM centos:7.9.2009 as builder-base
+FROM centos:7.9.2009 AS builder-base
 
 LABEL maintainer="Michal Lazniewski <mlazniewski@pzh.gov.pl>"
 
@@ -7,7 +7,7 @@ RUN yum install -y tar bzip2 make gcc gcc-c++ libstdc++-static zlib-devel vim wh
 ## END
 
 ## MANTA
-FROM builder-base as builder-manta
+FROM builder-base AS builder-manta
 ENV CC=/usr/bin/gcc
 ENV CXX=/usr/bin/g++
 RUN mkdir -p /opt/docker
@@ -21,18 +21,18 @@ RUN make -j 4 install
 ## End
 
 ## Htslib v1.17
-FROM builder-base as builder-htslib
+FROM builder-base AS builder-htslib
 WORKDIR /opt/docker
 RUN wget https://github.com/samtools/htslib/releases/download/1.17/htslib-1.17.tar.bz2
 RUN tar -xf htslib-1.17.tar.bz2
 WORKDIR /opt/docker/htslib-1.17
 RUN ./configure --prefix=/opt/docker/htslib
 RUN make -j $(nproc) && make install
-ENV LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH"
+ENV LD_LIBRARY_PATH="/usr/local/lib"
 ## End
 
 ## Bcftools v1.17
-FROM builder-base as builder-bcftools
+FROM builder-base AS builder-bcftools
 WORKDIR /opt/docker
 RUN wget https://github.com/samtools/bcftools/releases/download/1.17/bcftools-1.17.tar.bz2
 RUN tar -xf bcftools-1.17.tar.bz2
@@ -42,7 +42,7 @@ RUN make -j $(nproc) && make install
 ## End
 
 ## Samtools v1.17
-FROM builder-base as builder-samtools
+FROM builder-base AS builder-samtools
 WORKDIR /opt/docker
 RUN wget https://github.com/samtools/samtools/releases/download/1.17/samtools-1.17.tar.bz2
 RUN tar -xf samtools-1.17.tar.bz2
@@ -52,14 +52,14 @@ RUN make -j $(nproc) && make install
 ## End
 
 ## Python packages
-FROM builder-base as builder-python-packages
+FROM builder-base AS builder-python-packages
 RUN curl https://bootstrap.pypa.io/pip/2.7/get-pip.py | python # Vide: https://stackoverflow.com/questions/16370583/pip-issue-installing-almost-any-library
 RUN pip install numpy==1.16.5
 RUN pip install biopython==1.76
 
 CMD ["/bin/bash"]
 
-FROM centos:7.9.2009 as production
+FROM centos:7.9.2009 AS production
 
 RUN yum install -y epel-release
 RUN yum install -y tar python2-pip
@@ -70,8 +70,8 @@ RUN rpm -Uvh mafft-7.520-gcc_fc6.x86_64.rpm && \
     rm -f /opt/docker/mafft-7.520-gcc_fc6.x86_64.rpm
 
 ## Kopiowanie wymaganych plikow
-RUN mkdir -p /SARS-CoV2/ 
-COPY data/sarscov2/genome /SARS-CoV2/genome
+#RUN mkdir -p /SARS-CoV2/
+#COPY data/sarscov2/genome /SARS-CoV2/genome
 WORKDIR /
 
 COPY --from=builder-manta /opt/docker/manta /opt/docker/manta
@@ -79,12 +79,15 @@ COPY --from=builder-htslib /opt/docker/htslib /opt/docker/htslib
 COPY --from=builder-bcftools /opt/docker/bcftools /opt/docker/bcftools
 COPY --from=builder-samtools /opt/docker/samtools /opt/docker/samtools
 COPY --from=builder-python-packages /usr/lib64/python2.7/site-packages /usr/lib64/python2.7/site-packages/
-COPY data/sarscov2/genome/SarsCov2/ /home/data/sarscov2/genome
-
-ENV PATH="/opt/docker/manta/bin:/opt/docker/htslib/bin:/opt/docker/bcftools/bin:/opt/docker/samtools/bin:$PATH"
-ENV LD_LIBRARY_PATH="/opt/docker/manta/lib:/opt/docker/htslib/lib:/opt/docker/bcftools/lib:/opt/docker/samtools/lib:$LD_LIBRARY_PATH"
-ENV GENOME_ID="MN908947.3"
-ENV GENOME_FASTA="/home/data/sarscov2/genome/sarscov2.fasta"
+#COPY data/sarscov2/genome/SarsCov2/ /home/data/sarscov2/genome
+COPY bin /home/bin
+ENV PATH="/home/bin/common:"\
+"/home/bin/sarscov2:"\
+"/home/bin/infl:"\
+"/opt/docker/manta/bin:/opt/docker/htslib/bin:/opt/docker/bcftools/bin:/opt/docker/samtools/bin:$PATH"
+ENV LD_LIBRARY_PATH="/opt/docker/manta/lib:/opt/docker/htslib/lib:/opt/docker/bcftools/lib:/opt/docker/samtools/lib:/usr/local/lib"
+#ENV GENOME_ID="MN908947.3"
+#ENV GENOME_FASTA="/home/data/sarscov2/genome/sarscov2.fasta"
 ## END
 
 CMD ["/bin/bash"]
